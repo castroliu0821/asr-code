@@ -1,0 +1,74 @@
+package navi.VoiceRecog;
+option optimize_for = LITE_RUNTIME;
+
+option cc_generic_services = true;
+
+message APIRequest {
+required APIReqType   api_req_type = 1;
+optional ApiParam     param        = 2;
+optional ApiData      data         = 3;
+optional ApiLast      last         = 4;
+optional ApiCancel    cancel       = 5;
+optional ApiThirdData third_data   = 6;
+};
+
+enum APIReqType {
+API_REQ_TYPE_PARAM      = 1;
+API_REQ_TYPE_DATA       = 2;
+API_REQ_TYPE_LAST       = 3;
+API_REQ_TYPE_CANCEL     = 4;
+API_REQ_TYPE_THIRD_DATA = 5;
+};
+
+message ApiParam {
+required int32  sample_rate      = 1;
+required string format           = 2;
+optional bool   early_return     = 3;
+required string imei             = 4;
+required int32  home_link_type   = 5;
+required string asr_backend_type = 6;
+};
+
+message ApiData {
+required uint32 len       = 1;
+required bytes  post_data = 2;
+};
+
+message ApiLast {
+};
+
+message ApiHeart {
+};
+
+message ApiCancel {
+};
+
+message ApiThirdData {
+required uint32 len        = 1;
+required bytes  third_data = 2;
+optional string type       = 3;
+};
+
+message APIResponse {
+required APIRespType  type       = 1;
+required string       id         = 2;
+required int32        err_no     = 3;
+optional string       err_msg    = 4;
+optional ASRResult    result     = 5;
+optional ApiThirdData third_data = 6;
+optional ApiHeart     heart      = 7;
+optional ApiLast      last       = 8;
+};
+
+enum APIRespType {
+API_RESP_TYPE_MIDDLE = 1;
+API_RESP_TYPE_RES    = 2;
+API_RESP_TYPE_THIRD  = 3;
+API_RESP_TYPE_HEART  = 4;
+API_RESP_TYPE_LAST   = 5;
+};
+
+message ASRResult {
+repeated string word           = 1;
+repeated string uncertain_word = 2;
+};
