@@ -1,0 +1,13 @@
+Guide TTS
+case 1: 正常播放的情况
+case 2：播放过程中有以下消息
+    1）PTT long press................ 立即回复并打断TTS后，播放EndBeep 退出
+    2) Meter hard back key press..... 立即回复并打断TTS后，播放EndBeep 退出
+    3) Smarthome service status...... 立即回复并打断TTS后，播放EndBeep 退出
+    4) Change language............... 立即回复并打断TTS后，播放EndBeep 退出
+    5) Smarthome cancel.............. 打断TTS后，播放EndBeep，回复Cancel 退出
+    6) Tts crash cancel.............. 立即回复后，退出
+    7) Notify abnormal............... 打断TTS后，POP_ONS, 伺机退出
+    8）以上消息重复发送过来时呢？
+
+

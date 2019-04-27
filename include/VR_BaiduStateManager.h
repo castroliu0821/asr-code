@@ -80,6 +80,7 @@ private:
     std::string                  m_StopTtsMsg;       // Store cause to stop message
     bool                         m_bNeedQuitVr;      // Need service quit vr flag after play end beep
     bool                         m_bPlayGuide;       // Is in playing guide tts
+    bool                         m_bStopGuide;       // Is in stop guide tts
     std::string                  m_CacheThirdMsg;    // Cache third in return beep phases
 };
 

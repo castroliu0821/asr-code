@@ -38,6 +38,7 @@ VR_BaiduStateManager::VR_BaiduStateManager(VR_BaiduDialogEngine *pEngine)
     , m_StopTtsAciontId(0)
     , m_bNeedQuitVr(false)
     , m_bPlayGuide(false)
+    , m_bStopGuide(false)
 {
     VR_LOGD_FUNC();
 }
@@ -271,9 +272,9 @@ bool VR_BaiduStateManager::HandleGuideTtsResult()
 
 bool VR_BaiduStateManager::HandleStopTtsResult()
 {
-    if (m_bPlayGuide) {
+    if (m_bStopGuide) {
         VR_LOGD("[DEBUG] ..... stop guide tts");
-        m_bPlayGuide = false;                                                   // update play guide tts state, quit vr after play end beep
+        m_bStopGuide = false;
         m_bNeedQuitVr = true;
 
         m_CancelList.push_back(m_StopTtsMsg);
@@ -504,9 +505,11 @@ bool VR_BaiduStateManager::HandleStartEngine(string& msg)
         VR_LOGD("[DEBUG] ..... play tts : %s", tts.c_str());
 
         m_bPlayGuide = true;
+        m_bStopGuide = false;
         return true;
     }
 
+    m_bStopGuide = false;
     m_bPlayGuide = false;
     m_IsContinue = false;
     m_bNeedQuitVr = false;
@@ -654,8 +657,7 @@ bool VR_BaiduStateManager::HandleCancelMessge(std::string& mesg)
             id = m_pEngine->GenerateId();
             m_pEngine->ReplyMessage(xml, id);
 
-            m_bPlayGuide = false;                                               // update play guide tts state
-            if (m_CurState == em_Vr_Engine_idle) {
+            if (m_CurState == em_Vr_Engine_idle || m_bPlayGuide || m_bStopGuide) {
                 break;
             }
 
@@ -681,15 +683,20 @@ bool VR_BaiduStateManager::HandleCancelMessge(std::string& mesg)
             }
 
             m_CancelList.clear();
+            
+            if (!m_bPlayGuide && !m_bStopGuide) {
+                m_pEngine->SendCloseConn();
 
-            xml = XML_RELEASE_NETWORK;                                          // release communication right
-            id = m_pEngine->GenerateId();
-            m_pEngine->ReplyMessage(xml, id);
+                xml = XML_RELEASE_NETWORK;                                          // release communication right
+                id = m_pEngine->GenerateId();
+                m_pEngine->ReplyMessage(xml, id);
+            }
 
             m_CurState = em_Vr_Engine_idle;
             xml = XML_QUIT_APP;
             id = m_pEngine->GenerateId();
             m_pEngine->ReplyMessage(xml, id);
+            m_bPlayGuide = false;                                               // update play guide tts state
             break;
         }
 
@@ -702,6 +709,8 @@ bool VR_BaiduStateManager::HandleCancelMessge(std::string& mesg)
                 m_StopTtsAciontId = m_pEngine->GenerateId();
                 m_pEngine->ReplyMessage(xml, m_StopTtsAciontId);
                 m_StopTtsMsg = mesg;
+                m_bStopGuide = true;
+                m_bPlayGuide = false;
                 break;
             }
 
@@ -753,6 +762,8 @@ bool VR_BaiduStateManager::HandleCancelMessge(std::string& mesg)
                 m_StopTtsAciontId = m_pEngine->GenerateId();
                 m_pEngine->ReplyMessage(xml, m_StopTtsAciontId);
                 m_StopTtsMsg = mesg;
+                m_bStopGuide = true;
+                m_bPlayGuide = false;
                 break;
             }
 
@@ -794,6 +805,8 @@ bool VR_BaiduStateManager::HandleCancelMessge(std::string& mesg)
                 m_StopTtsAciontId = m_pEngine->GenerateId();
                 m_pEngine->ReplyMessage(xml, m_StopTtsAciontId);
                 m_StopTtsMsg = mesg;
+                m_bStopGuide = true;
+                m_bPlayGuide = false;
                 break;
             }
 
@@ -836,6 +849,8 @@ bool VR_BaiduStateManager::HandleCancelMessge(std::string& mesg)
                 m_StopTtsAciontId = m_pEngine->GenerateId();
                 m_pEngine->ReplyMessage(xml, m_StopTtsAciontId);
                 m_StopTtsMsg = mesg;
+                m_bStopGuide = true;
+                m_bPlayGuide = false;
                 break;
             }
 
@@ -882,6 +897,8 @@ bool VR_BaiduStateManager::HandleCancelMessge(std::string& mesg)
                 m_StopTtsAciontId = m_pEngine->GenerateId();
                 m_pEngine->ReplyMessage(xml, m_StopTtsAciontId);
                 m_StopTtsMsg = mesg;
+                m_bStopGuide = true;
+                m_bPlayGuide = false;
                 break;
             }
 
@@ -915,21 +932,23 @@ bool VR_BaiduStateManager::HandleCancelMessge(std::string& mesg)
     return res;
 }
 
-bool VR_BaiduStateManager::HandleCommException(string& mesg)
+nbool VR_BaiduStateManager::HandleCommException(string& mesg)
 {
     VR_LOGD("[DEBUG] ..... handle abnormal msg, state: %d", m_CurState);
 
-    if (m_bPlayGuide) {
-        string xml = (format(XML_ACTION_STOPTTS) % m_GuideTtsActionId).str();   // don't care stop tts result
-        int id = m_pEngine->GenerateId();
-        m_pEngine->ReplyMessage(xml, id);
-        m_StopTtsMsg = "";
+    if ((m_CurState == em_Vr_Engine_idle ||
+        m_CurState == em_Vr_Engine_error ||
+        m_CurState == em_Vr_Engine_wait_beep_e) && m_bPlayGuide) {
+        return false;
     }
 
-    if (m_CurState == em_Vr_Engine_idle ||
-        m_CurState == em_Vr_Engine_error ||
-        m_CurState == em_Vr_Engine_wait_beep_e) {
-        return false;
+    if (m_bPlayGuide) {
+        string xml = (format(XML_ACTION_STOPTTS) % m_GuideTtsActionId).str();   // don't care stop tts result
+        m_GuideTtsActionId = m_pEngine->GenerateId();
+        m_pEngine->ReplyMessage(xml, m_GuideTtsActionId);
+        m_StopTtsMsg = "";
+        m_bStopGuide = true;
+        m_bPlayGuide = false;
     }
 
     if (m_CurState == em_Vr_Engine_listening) {
